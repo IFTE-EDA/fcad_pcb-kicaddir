@@ -13,6 +13,7 @@ import DraftGeomUtils,DraftVecUtils
 import Path
 
 import sys, os
+import re
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 from .kicad_parser import KicadPCB,SexpList,SexpParser,parseSexp
 from .kicad_parser import unquote
@@ -420,8 +421,26 @@ def getKicadPath(env=''):
     if not os.path.isfile(kicad_common):
         kicad_common += ".json"
         if not os.path.isfile(kicad_common):
-            logger.warning('cannot find kicad_common')
-            return None
+            subdir = None
+            version = 0
+            for dir in os.listdir(confpath):
+                try:
+                    if float(dir) > version:
+                        version = float(dir)
+                        subdir = dir
+                except:
+                    continue
+            if subdir is None or version == 0:
+                return None
+            confpath = os.path.join(confpath, subdir)
+            kicad_common = os.path.join(confpath, 'kicad_common')
+            logger.warning("Checking {}".format(kicad_common))
+            if not os.path.isfile(kicad_common):
+                kicad_common += ".json"
+                if not os.path.isfile(kicad_common):
+                    logger.warning('cannot find kicad_common')
+                    return None
+            logger.info("Found kicad_common at {}".format(kicad_common))
     with open(kicad_common,'r') as f:
         content = f.read()
     match = re.search(r'^\s*"*KISYS3DMOD"*\s*[:=]\s*([^\r\n]+)',content,re.MULTILINE)
